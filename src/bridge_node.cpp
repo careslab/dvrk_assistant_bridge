@@ -4,6 +4,7 @@
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float32.h>
 #include <sensor_msgs/JointState.h>
+#include <std_msgs/Int16.h>
 #include <boost/shared_ptr.hpp>
 
 /* bridge2dvrk
@@ -26,7 +27,8 @@ private:
     void autocameraFindToolsCallback(const std_msgs::Empty::ConstPtr &msg);
     void autocameraInnerZoomCallback(const std_msgs::Float32::ConstPtr &msg);
     void autocameraOuterZoomCallback(const std_msgs::Float32::ConstPtr &msg);
-    void saveCurrentEcmPositionAs(const std_msgs::String::ConstPtr &msg);
+    void saveCurrentEcmPositionAs(const std_msgs::Int16::ConstPtr &msg);
+    void gotoCurrentEcmPositionAs(const std_msgs::Int16::ConstPtr &msg);
 
     // ROS objects
     ros::NodeHandle mNodeHandle;
@@ -53,6 +55,10 @@ bridge2dvrk::bridge2dvrk()
     mSubscriberMap["inner_zoom_value"] = mNodeHandle.subscribe("/assistant/autocamera/inner_zoom_value", 100, &bridge2dvrk::autocameraInnerZoomCallback, this);
     //Float32:
     mSubscriberMap["outer_zoom_value"] = mNodeHandle.subscribe("/assistant/autocamera/outer_zoom_value", 100, &bridge2dvrk::autocameraOuterZoomCallback, this);
+    //Int16 with save position name
+    mSubscriberMap["save_ecm_position"] = mNodeHandle.subscribe("/assistant/save_ecm_position", 100, &bridge2dvrk::saveCurrentEcmPositionAs, this);
+    //Int16 with save go to name
+    mSubscriberMap["goto_ecm_position"] = mNodeHandle.subscribe("/assistant/goto_ecm_position", 100, &bridge2dvrk::gotoCurrentEcmPositionAs, this);
 
     
     /*****PUBLISHER SETUP******/
@@ -68,6 +74,10 @@ bridge2dvrk::bridge2dvrk()
     mPublisherMap["inner_zoom_value"] = mNodeHandle.advertise<std_msgs::Float32>("/autocamera/inner_zoom_value", 10,true);
     //Float32:
     mPublisherMap["outer_zoom_value"] = mNodeHandle.advertise<std_msgs::Float32>("/autocamera/outer_zoom_value", 10,true);
+    //Int16 with save position name
+    mPublisherMap["save_ecm_position"] = mNodeHandle.advertise<std_msgs::Int16>("/autocamera/save_ecm_position", 10,true);
+    //Int16 with save go to name
+    mPublisherMap["goto_ecm_position"] = mNodeHandle.advertise<std_msgs::Int16>("/autocamera/goto_ecm_position", 10,true);
     
 }
 
@@ -101,20 +111,27 @@ void bridge2dvrk::autocameraOuterZoomCallback(const std_msgs::Float32::ConstPtr 
 {
     mPublisherMap["outer_zoom_value"].publish(msg);
 }
-void bridge2dvrk::saveCurrentEcmPositionAs(const std_msgs::String::ConstPtr &msg)
+void bridge2dvrk::saveCurrentEcmPositionAs(const std_msgs::Int16::ConstPtr &msg)
 {
-
+    //This smart ptr and subsequent waitForMessage allows you to get data once without a subscriber
     boost::shared_ptr<sensor_msgs::JointState const> sharedPtr;
     sensor_msgs::JointState js;
 
     //Get joint angles from the simulation
     sharedPtr  = ros::topic::waitForMessage<sensor_msgs::JointState>("/dvrk_ecm/joint_states", ros::Duration(1));
     if (sharedPtr == NULL)
+    {
         ROS_INFO("No Current Joint angle messages received");
+    }
     else
+    {
         js = *sharedPtr;
-        mSavedEcmPositionsMap[msg->data.c_str()] = js;
+        mSavedEcmPositionsMap[std::to_string(msg->data)] = js; 
+    }
 
+}
+void bridge2dvrk::gotoCurrentEcmPositionAs(const std_msgs::Int16::ConstPtr &msg)
+{
 
 //     """Move the arm to the end vector by passing the trajectory generator.
 
