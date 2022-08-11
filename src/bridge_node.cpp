@@ -5,7 +5,9 @@
 #include <std_msgs/Float32.h>
 #include <sensor_msgs/JointState.h>
 #include <std_msgs/Int16.h>
+#include <std_msgs/Empty.h>
 #include <boost/shared_ptr.hpp>
+#include <unordered_map>
 
 /* bridge2dvrk
  *std_msgs
@@ -29,12 +31,15 @@ private:
     void autocameraOuterZoomCallback(const std_msgs::Float32::ConstPtr &msg);
     void saveCurrentEcmPositionAs(const std_msgs::Int16::ConstPtr &msg);
     void gotoCurrentEcmPositionAs(const std_msgs::Int16::ConstPtr &msg);
+    void dvrkRunOnCallback(const std_msgs::Empty::ConstPtr &msg);
+    void dvrkRunOffCallback(const std_msgs::Empty::ConstPtr &msg);
+    void dvrkHomeCallback(const std_msgs::Empty::ConstPtr &msg);
 
     // ROS objects
     ros::NodeHandle mNodeHandle;
-    std::map<std::string, ros::Publisher> mPublisherMap;
-    std::map<std::string, ros::Subscriber> mSubscriberMap;
-    std::map<std::string, sensor_msgs::JointState> mSavedEcmPositionsMap;
+    std::unordered_map<std::string, ros::Publisher> mPublisherMap;
+    std::unordered_map<std::string, ros::Subscriber> mSubscriberMap;
+    std::unordered_map<std::string, sensor_msgs::JointState> mSavedEcmPositionsMap;
     ros::Subscriber point_sub_;
 };
 
@@ -59,8 +64,13 @@ bridge2dvrk::bridge2dvrk()
     mSubscriberMap["save_ecm_position"] = mNodeHandle.subscribe("/assistant/save_ecm_position", 100, &bridge2dvrk::saveCurrentEcmPositionAs, this);
     //Int16 with save go to name
     mSubscriberMap["goto_ecm_position"] = mNodeHandle.subscribe("/assistant/goto_ecm_position", 100, &bridge2dvrk::gotoCurrentEcmPositionAs, this);
+    //turn on dvrk
+    mSubscriberMap["dvrk_on"] = mNodeHandle.subscribe("/assistant/dvrk_on", 100, &bridge2dvrk::dvrkRunOnCallback, this);
+    //turn off dvrk
+    mSubscriberMap["dvrk_off"] = mNodeHandle.subscribe("/assistant/dvrk_off", 100, &bridge2dvrk::dvrkRunOffCallback, this);
+    //dvrk home
+    mSubscriberMap["dvrk_home"] = mNodeHandle.subscribe("/assistant/dvrk_home",100,&bridge2dvrk::dvrkHomeCallback,this);
 
-    
     /*****PUBLISHER SETUP******/
     //Bool: *True or *False
     mPublisherMap["run"] = mNodeHandle.advertise<std_msgs::Bool>("/autocamera/run", 10, true);
@@ -78,6 +88,12 @@ bridge2dvrk::bridge2dvrk()
     mPublisherMap["save_ecm_position"] = mNodeHandle.advertise<std_msgs::Int16>("/autocamera/save_ecm_position", 10,true);
     //Int16 with save go to name
     mPublisherMap["goto_ecm_position"] = mNodeHandle.advertise<std_msgs::Int16>("/autocamera/goto_ecm_position", 10,true);
+    //turn on dvrk
+    mPublisherMap["dvrk_on"] = mNodeHandle.advertise<std_msgs::Empty>("/dvrk/console/power_on", 10,true);
+    //turn off dvrk
+    mPublisherMap["dvrk_off"] = mNodeHandle.advertise<std_msgs::Empty>("/dvrk/console/power_off", 10,true);
+    //home the dvrk
+    mPublisherMap["dvrk_home"] = mNodeHandle.advertise<std_msgs::Empty>("/dvrk/console/home",10,true);
     
 }
 
@@ -150,11 +166,22 @@ void bridge2dvrk::gotoCurrentEcmPositionAs(const std_msgs::Int16::ConstPtr &msg)
 //             return True
 }
 
+void bridge2dvrk::dvrkRunOnCallback(const std_msgs::Empty::ConstPtr &msg){
+    mPublisherMap["dvrk_on"].publish(msg);
+}
+
+void bridge2dvrk::dvrkRunOffCallback(const std_msgs::Empty::ConstPtr &msg){
+    mPublisherMap["dvrk_off"].publish(msg);
+}
+
+void bridge2dvrk::dvrkHomeCallback(const std_msgs::Empty::ConstPtr &msg){
+    mPublisherMap["dvrk_home"].publish(msg);
+}
+
 int main(int argc, char **argv)
 {
     ROS_INFO_STREAM("Running dvrk assistant bridge!!");
     ros::init(argc, argv, "assistant_bridge");
     bridge2dvrk b;
-
     ros::spin();
 }
