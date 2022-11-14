@@ -22,17 +22,25 @@ public:
 
 private:
     void autocameraRunCallback(const std_msgs::Bool::ConstPtr &msg);
-    void autocameraTrackCallack(const std_msgs::String::ConstPtr &msg);
+    void autocameraTrackCallback(const std_msgs::String::ConstPtr &msg);
     void autocameraKeepCallback(const std_msgs::String::ConstPtr &msg);
     void autocameraFindToolsCallback(const std_msgs::Empty::ConstPtr &msg);
     void autocameraInnerZoomCallback(const std_msgs::Float32::ConstPtr &msg);
     void autocameraOuterZoomCallback(const std_msgs::Float32::ConstPtr &msg);
+
+    void clutchAndMoveRunCallback(const std_msgs::Bool::ConstPtr &msg);
+
+    void bleedingDetectionRunCallback(const std_msgs::Bool::ConstPtr &msg);
+
+    //DVRK Specific controls
     void saveCurrentEcmPositionAs(const std_msgs::Int16::ConstPtr &msg);
     void gotoCurrentEcmPositionAs(const std_msgs::Int16::ConstPtr &msg);
 
+    void home(const std_msgs::Empty::ConstPtr &msg);
+    void powerOff(const std_msgs::Empty::ConstPtr &msg);
+
     // ROS objects
     ros::NodeHandle mNodeHandle;
-    std::map<std::string, ros::Publisher> mPublisherMap;
     std::map<std::string, ros::Subscriber> mSubscriberMap;
     std::map<std::string, sensor_msgs::JointState> mSavedEcmPositionsMap;
     ros::Subscriber point_sub_;
@@ -43,74 +51,95 @@ private:
 bridge2dvrk::bridge2dvrk()
 {
     /*****SUBSCRIBER SETUP******/
+
+    //-----------Autocamera-----------------
     //Bool: *True or *False
-    mSubscriberMap["run"] = mNodeHandle.subscribe("/assistant/autocamera/run", 100, &bridge2dvrk::autocameraRunCallback, this);
+    mSubscriberMap["autocamera_run"] = mNodeHandle.subscribe("/assistant/autocamera/run", 100, &bridge2dvrk::autocameraRunCallback, this);
     //String: *Right, *Left, or *Middle
-    mSubscriberMap["track"] = mNodeHandle.subscribe("/assistant/autocamera/track", 100, &bridge2dvrk::autocameraTrackCallack, this);
+    mSubscriberMap["autocamera_track"] = mNodeHandle.subscribe("/assistant/autocamera/track", 100, &bridge2dvrk::autocameraTrackCallback, this);
     //String: *Right, *Left, or *Middle
-    mSubscriberMap["keep"] = mNodeHandle.subscribe("/assistant/autocamera/keep", 100, &bridge2dvrk::autocameraKeepCallback, this);
+    mSubscriberMap["autocamera_keep"] = mNodeHandle.subscribe("/assistant/autocamera/keep", 100, &bridge2dvrk::autocameraKeepCallback, this);
     //Empty:
-    mSubscriberMap["find_tools"] = mNodeHandle.subscribe("/assistant/autocamera/find_tools", 100, &bridge2dvrk::autocameraFindToolsCallback, this);
+    mSubscriberMap["autocamera_find_tools"] = mNodeHandle.subscribe("/assistant/autocamera/find_tools", 100, &bridge2dvrk::autocameraFindToolsCallback, this);
     //Float32:
-    mSubscriberMap["inner_zoom_value"] = mNodeHandle.subscribe("/assistant/autocamera/inner_zoom_value", 100, &bridge2dvrk::autocameraInnerZoomCallback, this);
+    mSubscriberMap["autocamera_inner_zoom_value"] = mNodeHandle.subscribe("/assistant/autocamera/inner_zoom_value", 100, &bridge2dvrk::autocameraInnerZoomCallback, this);
     //Float32:
-    mSubscriberMap["outer_zoom_value"] = mNodeHandle.subscribe("/assistant/autocamera/outer_zoom_value", 100, &bridge2dvrk::autocameraOuterZoomCallback, this);
+    mSubscriberMap["autocamera_outer_zoom_value"] = mNodeHandle.subscribe("/assistant/autocamera/outer_zoom_value", 100, &bridge2dvrk::autocameraOuterZoomCallback, this);
+
+
+    //-----------Clutch and Move-----------------
+    //Bool: *True or *False
+    mSubscriberMap["clutch_and_move_run"] = mNodeHandle.subscribe("/assistant/clutch_and_move/run", 100, &bridge2dvrk::clutchAndMoveRunCallback, this);
+
+    //-----------Bleeding Detection-----------------
+    //Bool: *True or *False
+    mSubscriberMap["bleed_run"] = mNodeHandle.subscribe("/assistant/bleeding_detection/run", 100, &bridge2dvrk::bleedingDetectionRunCallback, this);
+
+    //-----------DVRK Specific Functions-----------------
     //Int16 with save position name
     mSubscriberMap["save_ecm_position"] = mNodeHandle.subscribe("/assistant/save_ecm_position", 100, &bridge2dvrk::saveCurrentEcmPositionAs, this);
     //Int16 with save go to name
     mSubscriberMap["goto_ecm_position"] = mNodeHandle.subscribe("/assistant/goto_ecm_position", 100, &bridge2dvrk::gotoCurrentEcmPositionAs, this);
-
-    
-    /*****PUBLISHER SETUP******/
-    //Bool: *True or *False
-    mPublisherMap["run"] = mNodeHandle.advertise<std_msgs::Bool>("/autocamera/run", 10, true);
-    //String: *Right, *Left, or *Middle
-    mPublisherMap["track"] = mNodeHandle.advertise<std_msgs::String>("/autocamera/track", 10, true);
-    //String: *Right, *Left, or *Middle
-    mPublisherMap["keep"] = mNodeHandle.advertise<std_msgs::String>("/autocamera/keep", 10,  true);
     //Empty:
-    mPublisherMap["find_tools"] = mNodeHandle.advertise<std_msgs::Empty>("/autocamera/find_tools", 10, true);
-    //Float32:
-    mPublisherMap["inner_zoom_value"] = mNodeHandle.advertise<std_msgs::Float32>("/autocamera/inner_zoom_value", 10,true);
-    //Float32:
-    mPublisherMap["outer_zoom_value"] = mNodeHandle.advertise<std_msgs::Float32>("/autocamera/outer_zoom_value", 10,true);
-    //Int16 with save position name
-    mPublisherMap["save_ecm_position"] = mNodeHandle.advertise<std_msgs::Int16>("/autocamera/save_ecm_position", 10,true);
-    //Int16 with save go to name
-    mPublisherMap["goto_ecm_position"] = mNodeHandle.advertise<std_msgs::Int16>("/autocamera/goto_ecm_position", 10,true);
-    
+    mSubscriberMap["home"] = mNodeHandle.subscribe("/assistant/home", 100, &bridge2dvrk::home, this);
+    //Empty:
+    mSubscriberMap["power_off"] = mNodeHandle.subscribe("/assistant/power_off", 100, &bridge2dvrk::powerOff, this);
 }
 
 // Callback function for the run
 void bridge2dvrk::autocameraRunCallback(const std_msgs::Bool::ConstPtr &msg)
 {
-    mPublisherMap["run"].publish(msg);
+    mNodeHandle.advertise<std_msgs::Bool>("/autocamera/run", 10, true).publish(msg);
 }
 // Callback function for the track
-void bridge2dvrk::autocameraTrackCallack(const std_msgs::String::ConstPtr &msg)
+void bridge2dvrk::autocameraTrackCallback(const std_msgs::String::ConstPtr &msg)
 {
-    mPublisherMap["track"].publish(msg);
+    mNodeHandle.advertise<std_msgs::String>("/autocamera/track", 10, true).publish(msg);
 }
 // Callback function for the keep
 void bridge2dvrk::autocameraKeepCallback(const std_msgs::String::ConstPtr &msg)
 {
-    mPublisherMap["keep"].publish(msg);
+    mNodeHandle.advertise<std_msgs::String>("/autocamera/keep", 10,  true).publish(msg);
 }
 // Callback function for the find_tools
 void bridge2dvrk::autocameraFindToolsCallback(const std_msgs::Empty::ConstPtr &msg)
 {
-    mPublisherMap["find_tools"].publish(msg);
+    mNodeHandle.advertise<std_msgs::Empty>("/autocamera/find_tools", 10, true).publish(msg);
 }
 // Callback function for the inner_zoom_value
 void bridge2dvrk::autocameraInnerZoomCallback(const std_msgs::Float32::ConstPtr &msg)
 {
-    mPublisherMap["inner_zoom_value"].publish(msg);
+    mNodeHandle.advertise<std_msgs::Float32>("/autocamera/inner_zoom_value", 10,true).publish(msg);
 }
 // Callback function for the outer_zoom_value
 void bridge2dvrk::autocameraOuterZoomCallback(const std_msgs::Float32::ConstPtr &msg)
 {
-    mPublisherMap["outer_zoom_value"].publish(msg);
+   mNodeHandle.advertise<std_msgs::Float32>("/autocamera/outer_zoom_value", 10,true).publish(msg);
 }
+
+
+// Callback function for the run
+void bridge2dvrk::clutchAndMoveRunCallback(const std_msgs::Bool::ConstPtr &msg)
+{
+    mNodeHandle.advertise<std_msgs::Bool>("/clutch_and_move/run", 10, true).publish(msg);
+}
+
+// Callback function for the run
+void bridge2dvrk::bleedingDetectionRunCallback(const std_msgs::Bool::ConstPtr &msg)
+{
+    mNodeHandle.advertise<std_msgs::Bool>("/bleeding_detection/run", 10, false).publish(msg);
+}
+
+
+void bridge2dvrk::home(const std_msgs::Empty::ConstPtr &msg)
+{
+    mNodeHandle.advertise<std_msgs::Empty>("/dvrk/console/home", 10, true).publish(msg);
+}
+void bridge2dvrk::powerOff(const std_msgs::Empty::ConstPtr &msg)
+{
+    mNodeHandle.advertise<std_msgs::Empty>("/dvrk/console/power_off", 10, true).publish(msg);
+}
+
 void bridge2dvrk::saveCurrentEcmPositionAs(const std_msgs::Int16::ConstPtr &msg)
 {
     //This smart ptr and subsequent waitForMessage allows you to get data once without a subscriber
@@ -146,8 +175,8 @@ void bridge2dvrk::gotoCurrentEcmPositionAs(const std_msgs::Int16::ConstPtr &msg)
 //             joint_state = JointState()
 //             joint_state.position[:] = end_joint
 //             self.set_position_joint_publisher.publish(joint_state)
-// #             rospy.loginfo(rospy.get_caller_id() + ' <- completing move joint direct')
-//             return True
+//
+//self.__full_ros_namespace+ '/set_position_joint
 }
 
 int main(int argc, char **argv)
