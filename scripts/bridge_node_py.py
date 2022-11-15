@@ -17,43 +17,43 @@ __arms_homed__ = False
 # Autocamera Callbacks
 #--------------------------------------------------------
 def autocameraRunCallback(data):
-    rospy.Publisher('/autocamera/run', String, latch=True).publish(data)
+    rospy.Publisher('/autocamera/run', Bool, latch=True, queue_size=10).publish(data)
 def autocameraTrackCallback(data):
-    rospy.Publisher('/autocamera/track', String, latch=True).publish(data)
+    rospy.Publisher('/autocamera/track', String, latch=True, queue_size=10).publish(data)
 def autocameraKeepCallback(data):
-    rospy.Publisher('/autocamera/keep', String, latch=True).publish(data)
+    rospy.Publisher('/autocamera/keep', String, latch=True, queue_size=10).publish(data)
 def autocameraFindToolsCallback(data):
-    rospy.Publisher('/autocamera/find_tools', String, latch=True).publish(data)
+    rospy.Publisher('/autocamera/find_tools', Empty, latch=True, queue_size=10).publish(data)
 def autocameraInnerZoomCallback(data):
-    rospy.Publisher('/autocamera/inner_zoom_value', String, latch=True).publish(data)
+    rospy.Publisher('/autocamera/inner_zoom_value', Int16, latch=True, queue_size=10).publish(data)
 def autocameraOuterZoomCallback(data):
-    rospy.Publisher('/autocamera/outer_zoom_value', String, latch=True).publish(data)
+    rospy.Publisher('/autocamera/outer_zoom_value', Int16, latch=True, queue_size=10).publish(data)
 
 #--------------------------------------------------------
 # Clutch and Move Callbacks
 #--------------------------------------------------------
 def clutchAndMoveRunCallback(data):
-    rospy.Publisher('/clutch_and_move/run', Bool, latch=True).publish(data)
+    rospy.Publisher('/clutch_and_move/run', Bool, latch=True, queue_size=10).publish(data)
 
 #--------------------------------------------------------
 # Clutch and Move Callbacks
 #--------------------------------------------------------
 def joystickRunCallback(data):
-    rospy.Publisher('/joystick/run', Bool, latch=True).publish(data)
+    rospy.Publisher('/joystick/run', Bool, latch=True, queue_size=10).publish(data)
 
 #--------------------------------------------------------
 # Bleeding Detection Callbacks
 #--------------------------------------------------------
 def bleedingDetectionRunCallback(data):
-    rospy.Publisher('/bleeding_detection/run', String, latch=True).publish(data)
+    rospy.Publisher('/bleeding_detection/run', String, latch=True, queue_size=10).publish(data)
 
 #--------------------------------------------------------
 # dvrk Callbacks
 #--------------------------------------------------------
 def home(data):
-    rospy.Publisher('/dvrk/console/home', String, latch=True).publish(data)
+    rospy.Publisher('/dvrk/console/home', Empty, queue_size=10).publish(data)
 def powerOff(data):
-    rospy.Publisher('/dvrk/console/power_off', String, latch=True).publish(data)
+    rospy.Publisher('/dvrk/console/power_off', Empty, queue_size=10).publish(data)
 def reset(data):
      
     q_ecm = [0.0, 0.0, 0.0, 0.0]
